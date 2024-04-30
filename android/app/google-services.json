@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "253165065100",
+    "project_id": "gestion-stock-clientes",
+    "storage_bucket": "gestion-stock-clientes.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253165065100:android:fd1ca82f4847bd40ec7ca9",
+        "android_client_info": {
+          "package_name": "com.example.gestion_stock_clientes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAKlk-xkS_Y8bW41Vg-RztXtL15is8goU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
