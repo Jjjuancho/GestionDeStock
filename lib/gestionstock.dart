@@ -1,7 +1,9 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_cast
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_cast, prefer_final_fields, avoid_function_literals_in_foreach_calls
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gestion_stock_clientes/login.dart';
 
 class GestionStock extends StatefulWidget {
   const GestionStock({super.key});
@@ -11,11 +13,48 @@ class GestionStock extends StatefulWidget {
 }
 
 class _GestionStock extends State<GestionStock> {
+  //Controller para la barra de búsqueda
   late TextEditingController _searchController;
+  //Lista para almacenar las categorías
+  List<String> categorias = [];
+  //Categorias seleccionada, por defecto: "Todas"
+  var categoriaSeleccionada = "Todas";
+
+  // En el método initState o en cualquier otro lugar apropiado
+  void recuperarCategorias() async {
+    //Recuperamos los documentos de la colección productos
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('productos').get();
+
+    //Declaramos un set para guardar las categorias recuperadas
+    Set<String> categoriasSet = {};
+
+    //Añadimos la opción todas
+    categoriasSet.add("Todas");
+
+    //Para cada documento recuperado
+    snapshot.docs.forEach((DocumentSnapshot document) {
+      //Se obtienen los datos del documento
+      Map<String, dynamic> dataDocumento =
+          document.data() as Map<String, dynamic>;
+
+      //Se recupera la categoría del documento
+      String category = dataDocumento['categoria'];
+
+      //Se agrega la categoria al set
+      categoriasSet.add(category);
+    });
+
+    //Una vez agregadas todas las categorías al Set, seteamos categorias
+    setState(() {
+      categorias = categoriasSet.toList();
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    recuperarCategorias();
     _searchController = TextEditingController();
   }
 
@@ -26,6 +65,19 @@ class _GestionStock extends State<GestionStock> {
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 178, 232, 222),
         title: Text("Gestión de Stock"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => Login()),
+              );
+            },
+            icon: Icon(Icons.logout),
+          ),
+          SizedBox(width: MediaQuery.of(context).size.width * 0.009)
+        ],
       ),
       body: Column(
         children: [
@@ -34,12 +86,44 @@ class _GestionStock extends State<GestionStock> {
             padding: EdgeInsets.all(8.0),
             child: Row(
               children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(15)),
+                    color: Color.fromARGB(255, 244, 224, 147),
+                  ),
+                  padding:
+                      EdgeInsets.only(left: 15, right: 15, top: 5, bottom: 5),
+                  child: DropdownButton<String>(
+                    //Valor inicial = 'Todas'
+                    value: categoriaSeleccionada,
+                    //Al seleccionar una categoría, seteamos categoriaSeleccionada
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        categoriaSeleccionada = newValue!;
+                      });
+                    },
+                    //Los items están en la lista 'categorias'
+                    items: categorias
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    borderRadius: BorderRadius.all(Radius.circular(15)),
+                    dropdownColor: Color.fromARGB(255, 212, 193, 117),
+                  ),
+                ),
+                SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre de producto',
                       prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -70,9 +154,14 @@ class _GestionStock extends State<GestionStock> {
           Expanded(
             child: StreamBuilder(
               //Suscribimos a la colección productos
-              stream: FirebaseFirestore.instance
-                  .collection('productos')
-                  .snapshots(),
+              stream: categoriaSeleccionada == "Todas"
+                  ? FirebaseFirestore.instance
+                      .collection('productos')
+                      .snapshots()
+                  : FirebaseFirestore.instance
+                      .collection('productos')
+                      .where('categoria', isEqualTo: categoriaSeleccionada)
+                      .snapshots(),
               builder: (BuildContext context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
@@ -141,6 +230,7 @@ class _GestionStock extends State<GestionStock> {
                                         .collection('productos')
                                         .doc(productoId)
                                         .delete();
+                                    recuperarCategorias();
                                   },
                                   style: ElevatedButton.styleFrom(
                                       backgroundColor:
@@ -259,13 +349,29 @@ class _GestionStock extends State<GestionStock> {
                   SizedBox(width: 10),
                   TextButton(
                       onPressed: () {
-                        FirebaseFirestore.instance.collection('productos').add({
-                          'nombre': nombre.text,
-                          'precio': precio.text,
-                          'cantidad': cantidad.text,
-                          'categoria': categoria.text
-                        });
-                        Navigator.pop(context);
+                        if (nombre.text.isNotEmpty &&
+                            precio.text.isNotEmpty &&
+                            cantidad.text.isNotEmpty &&
+                            categoria.text.isNotEmpty) {
+                          FirebaseFirestore.instance
+                              .collection('productos')
+                              .add({
+                            'nombre': nombre.text,
+                            'precio': precio.text,
+                            'cantidad': cantidad.text,
+                            'categoria': categoria.text
+                          });
+                          recuperarCategorias();
+                          Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    '¡Debe completar todos los campos!',
+                                    textAlign: TextAlign.center),
+                                duration: Duration(seconds: 2)),
+                          );
+                        }
                       },
                       child: Text("Agregar",
                           style: TextStyle(
@@ -351,16 +457,30 @@ class _GestionStock extends State<GestionStock> {
                   SizedBox(width: 10),
                   TextButton(
                       onPressed: () {
-                        FirebaseFirestore.instance
-                            .collection('productos')
-                            .doc(productoid)
-                            .update({
-                          'nombre': nombre.text,
-                          'precio': precio.text,
-                          'cantidad': cantidad.text,
-                          'categoria': categoria.text
-                        });
-                        Navigator.pop(context);
+                        if (nombre.text.isNotEmpty &&
+                            precio.text.isNotEmpty &&
+                            cantidad.text.isNotEmpty &&
+                            categoria.text.isNotEmpty) {
+                          FirebaseFirestore.instance
+                              .collection('productos')
+                              .doc(productoid)
+                              .update({
+                            'nombre': nombre.text,
+                            'precio': precio.text,
+                            'cantidad': cantidad.text,
+                            'categoria': categoria.text
+                          });
+                          recuperarCategorias();
+                          Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    '¡Debe completar todos los campos!',
+                                    textAlign: TextAlign.center),
+                                duration: Duration(seconds: 2)),
+                          );
+                        }
                       },
                       child: Text("Actualizar",
                           style: TextStyle(
