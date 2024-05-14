@@ -1,23 +1,23 @@
-// ignore_for_file: prefer_const_constructors, use_build_context_synchronously
+// ignore_for_file: prefer_const_constructors
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gestion_stock_clientes/gestionstock.dart';
-import 'package:gestion_stock_clientes/registro.dart';
+import 'package:gestion_stock_clientes/login.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+class Registro extends StatefulWidget {
+  const Registro({super.key});
 
   @override
-  State<Login> createState() => _Login();
+  State<Registro> createState() => _Registro();
 }
 
-class _Login extends State<Login> {
+class _Registro extends State<Registro> {
   //Controladores de correo electrónico y contraseña
   late String email;
   late String password;
+  late String passwordbis;
+  bool usuarioCreado = false;
 
-  //Interfaz gráfica
   @override
   Widget build(BuildContext context) {
     //Obtenemos el alto de la pantalla
@@ -43,10 +43,10 @@ class _Login extends State<Login> {
               ),
             ),
 
-            //SUBTITULO: Iniciá sesión para continuar
+            //SUBTITULO: Registrate y empezá a gestionar tu stock
             Center(
               child: Text(
-                'Iniciá sesión para continuar',
+                'Registrate y empezá a gestionar tu stock',
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.black.withOpacity(.6),
@@ -85,50 +85,69 @@ class _Login extends State<Login> {
             ),
 
             //ESPACIO
+            SizedBox(height: screenHeight * .025),
+
+            //CAJA DE TEXTO PARA REPETIR LA CONTRASEÑA
+            InputField(
+              onChanged: (value) {
+                setState(() {
+                  passwordbis = value;
+                });
+              },
+              labelText: 'Repetir contraseña',
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+            ),
+
+            //ESPACIO
             SizedBox(
               height: screenHeight * .075,
             ),
 
-            //BOTÓN INICIAR SESIÓN
+            //BOTÓN REGISTRARSE
             FormButton(
-              text: 'Iniciar sesión',
-              onPressed: () async {
-                try {
-                  await FirebaseAuth.instance.signInWithEmailAndPassword(
-                    email: email,
-                    password: password,
-                  );
+              text: 'Registrarse',
+              onPressed: () {
+                if (email.isNotEmpty &&
+                    password.isNotEmpty &&
+                    passwordbis.isNotEmpty) {
+                  if (password == passwordbis) {
+                    try {
+                      FirebaseAuth.instance.createUserWithEmailAndPassword(
+                          email: email, password: password);
+                    } catch (error) {
+                      mostrarCuadro(error.toString());
+                    }
 
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => GestionStock()),
-                  );
-                } catch (error) {
-                  mostrarCuadro(error.toString());
+                    mostrarCuadro("Usuario registrado correctamente.");
+                    usuarioCreado = true;
+                  } else {
+                    mostrarCuadro("Las contraseñas no coinciden.");
+                  }
+                } else {
+                  mostrarCuadro("Debe completar todos los campos.");
                 }
               },
             ),
 
-            SizedBox(height: screenHeight * .0075),
-
             //ESPACIO
-            SizedBox(height: screenHeight * .15),
+            SizedBox(height: screenHeight * .1),
 
-            //REGISTRARSE
+            //INICIAR SESIÓN
             TextButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => Registro()),
+                    MaterialPageRoute(builder: (context) => Login()),
                   );
                 },
                 child: RichText(
                   text: const TextSpan(
-                    text: "¿No tenés una cuenta? ",
+                    text: "¿Ya tenés una cuenta? ",
                     style: TextStyle(color: Colors.black),
                     children: [
                       TextSpan(
-                        text: '¡Registrate!',
+                        text: '¡Iniciá sesión!',
                         style: TextStyle(
                           color: Color.fromARGB(255, 120, 101, 27),
                           fontWeight: FontWeight.bold,
@@ -158,6 +177,10 @@ class _Login extends State<Login> {
               TextButton(
                   onPressed: () {
                     Navigator.pop(context);
+                    if (usuarioCreado) {
+                      Navigator.pushReplacement(context,
+                          MaterialPageRoute(builder: (context) => Login()));
+                    }
                   },
                   child: Center(child: Text('Aceptar'))),
             ],
