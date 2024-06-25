@@ -1,19 +1,18 @@
 // ignore_for_file: prefer_const_constructors, use_build_context_synchronously
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gestion_stock_clientes/gestionstock.dart';
-import 'package:gestion_stock_clientes/desarrolladores/login_desarrolladores.dart';
-import 'package:gestion_stock_clientes/registro.dart';
+import 'package:gestion_stock_clientes/desarrolladores/home_desarolladores.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+class LoginDesarrolladores extends StatefulWidget {
+  const LoginDesarrolladores({super.key});
 
   @override
-  State<Login> createState() => _Login();
+  State<LoginDesarrolladores> createState() => _LoginDesarrolladores();
 }
 
-class _Login extends State<Login> {
+class _LoginDesarrolladores extends State<LoginDesarrolladores> {
   //Controladores de correo electrónico y contraseña
   late String email;
   late String password;
@@ -36,7 +35,7 @@ class _Login extends State<Login> {
             //TITULO: ¡Bienvenido a Gestión de Stock
             Center(
               child: Text(
-                '¡Bienvenido a Gestión de Stock!',
+                'Login para desarrolladores',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -95,73 +94,46 @@ class _Login extends State<Login> {
               text: 'Iniciar sesión',
               onPressed: () async {
                 try {
+                  //Se inicia sesion con el correo y la contraseña
                   await FirebaseAuth.instance.signInWithEmailAndPassword(
                     email: email,
                     password: password,
                   );
 
+                  //Se obtiene el uid del usuario que inicia sesión
                   var uidActual =
                       FirebaseAuth.instance.currentUser?.uid.toString();
 
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            GestionStock(uidActual: uidActual)),
-                  );
+                  //Se obtiene el documento del usuario
+                  await FirebaseFirestore.instance
+                      .collection('desarrolladores')
+                      .doc(uidActual)
+                      .get()
+                      .then((value) {
+                    Map<String, dynamic> userData =
+                        value.data() as Map<String, dynamic>;
+
+                    //Se obtiene el rol del usuario y si es desarrollador se lo redirige al home de desarrolladores
+                    var rol = userData['rol'];
+                    if (rol == "desarrollador") {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => HomeDesarrolladores()),
+                      );
+                    } else {
+                      mostrarCuadro("El usuario no es administrador");
+                    }
+                  });
                 } catch (error) {
                   mostrarCuadro(error.toString());
                 }
               },
             ),
 
-            SizedBox(height: screenHeight * .0075),
-
             //ESPACIO
             SizedBox(height: screenHeight * .15),
-
-            //REGISTRARSE
-            TextButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => Registro()),
-                  );
-                },
-                child: RichText(
-                  text: const TextSpan(
-                    text: "¿No tenés una cuenta? ",
-                    style: TextStyle(color: Colors.black),
-                    children: [
-                      TextSpan(
-                        text: '¡Registrate!',
-                        style: TextStyle(
-                          color: Color.fromARGB(255, 120, 101, 27),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
           ],
-        ),
-      ),
-      floatingActionButton: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => LoginDesarrolladores()),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: Color.fromARGB(255, 250, 215, 75),
-        ),
-        child: Text(
-          "Desarrolladores",
-          style: const TextStyle(fontSize: 16, color: Colors.black),
         ),
       ),
     );

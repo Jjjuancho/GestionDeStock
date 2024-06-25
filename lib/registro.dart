@@ -1,7 +1,9 @@
 // ignore_for_file: prefer_const_constructors
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:gestion_stock_clientes/gestionstock.dart';
 import 'package:gestion_stock_clientes/login.dart';
 
 class Registro extends StatefulWidget {
@@ -12,8 +14,12 @@ class Registro extends StatefulWidget {
 }
 
 class _Registro extends State<Registro> {
-  //Controladores de correo electrónico y contraseña
+  //Controladores de datos
+  late String nombre;
+  late String apellido;
+  late String dni;
   late String email;
+  late String telefono;
   late String password;
   late String passwordbis;
   bool usuarioCreado = false;
@@ -30,7 +36,7 @@ class _Registro extends State<Registro> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: ListView(
           children: [
-            SizedBox(height: screenHeight * .12),
+            SizedBox(height: screenHeight * .10),
 
             //TITULO: ¡Bienvenido a Gestión de Stock
             Center(
@@ -56,6 +62,66 @@ class _Registro extends State<Registro> {
 
             //ESPACIO
             SizedBox(height: screenHeight * .12),
+
+            //CAJA DE TEXTO PARA EL NOMBRE
+            InputField(
+              onChanged: (value) {
+                setState(() {
+                  nombre = value;
+                });
+              },
+              labelText: 'Nombre',
+              keyboardType: TextInputType.name,
+              textInputAction: TextInputAction.next,
+            ),
+
+            //ESPACIO
+            SizedBox(height: screenHeight * .025),
+
+            //CAJA DE TEXTO PARA EL APELLIDO
+            InputField(
+              onChanged: (value) {
+                setState(() {
+                  apellido = value;
+                });
+              },
+              labelText: 'Apellido',
+              keyboardType: TextInputType.name,
+              textInputAction: TextInputAction.next,
+            ),
+
+            //ESPACIO
+            SizedBox(height: screenHeight * .025),
+
+            //CAJA DE TEXTO PARA EL DNI
+            InputField(
+              onChanged: (value) {
+                setState(() {
+                  dni = value;
+                });
+              },
+              labelText: 'DNI',
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+            ),
+
+            //ESPACIO
+            SizedBox(height: screenHeight * .025),
+
+            //CAJA DE TEXTO PARA EL TELEFONO
+            InputField(
+              onChanged: (value) {
+                setState(() {
+                  telefono = value;
+                });
+              },
+              labelText: 'Teléfono',
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+            ),
+
+            //ESPACIO
+            SizedBox(height: screenHeight * .025),
 
             //CAJA DE TEXTO PARA EL CORREO
             InputField(
@@ -107,18 +173,39 @@ class _Registro extends State<Registro> {
             //BOTÓN REGISTRARSE
             FormButton(
               text: 'Registrarse',
-              onPressed: () {
-                if (email.isNotEmpty &&
+              onPressed: () async {
+                if (nombre.isNotEmpty &&
+                    apellido.isNotEmpty &&
+                    dni.isNotEmpty &&
+                    telefono.isNotEmpty &&
+                    email.isNotEmpty &&
                     password.isNotEmpty &&
                     passwordbis.isNotEmpty) {
                   if (password == passwordbis) {
+                    //Intentamos registrar el usuario
                     try {
-                      FirebaseAuth.instance.createUserWithEmailAndPassword(
-                          email: email, password: password);
+                      await FirebaseAuth.instance
+                          .createUserWithEmailAndPassword(
+                              email: email, password: password);
+
+                      var uidActual =
+                          FirebaseAuth.instance.currentUser?.uid.toString();
+
+                      FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(uidActual)
+                          .set({
+                        'nombre': nombre,
+                        'apellido': apellido,
+                        'dni': dni,
+                        'correo': email,
+                        'telefono': telefono,
+                      });
                     } catch (error) {
                       mostrarCuadro(error.toString());
                     }
 
+                    //Si no hay errores al registrar el usuario
                     mostrarCuadro("Usuario registrado correctamente.");
                     usuarioCreado = true;
                   } else {
@@ -156,6 +243,8 @@ class _Registro extends State<Registro> {
                     ],
                   ),
                 )),
+
+            SizedBox(height: screenHeight * .10),
           ],
         ),
       ),
@@ -178,8 +267,12 @@ class _Registro extends State<Registro> {
                   onPressed: () {
                     Navigator.pop(context);
                     if (usuarioCreado) {
-                      Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (context) => Login()));
+                      var uidActual = FirebaseAuth.instance.currentUser?.uid;
+                      Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  GestionStock(uidActual: uidActual)));
                     }
                   },
                   child: Center(child: Text('Aceptar'))),

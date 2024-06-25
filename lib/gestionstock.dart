@@ -6,7 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gestion_stock_clientes/login.dart';
 
 class GestionStock extends StatefulWidget {
-  const GestionStock({super.key});
+  final String? uidActual;
+  const GestionStock({required this.uidActual, super.key});
 
   @override
   State<GestionStock> createState() => _GestionStock();
@@ -64,7 +65,25 @@ class _GestionStock extends State<GestionStock> {
       backgroundColor: Color.fromARGB(255, 240, 246, 248),
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 178, 232, 222),
-        title: Text("Gestión de Stock"),
+        title: StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(widget.uidActual)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Text('¡Bienvenido a Gestión de Stock, ...!');
+            } else if (snapshot.hasError) {
+              return Text('¡Bienvenido a Gestión de Stock!');
+            } else if (!snapshot.hasData || !snapshot.data!.exists) {
+              return Text('¡Bienvenido a Gestión de Stock!');
+            } else {
+              var userData = snapshot.data!.data() as Map<String, dynamic>;
+              return Text(
+                  "¡Bienvenido a Gestión de Stock, ${userData['nombre']}!");
+            }
+          },
+        ),
         actions: [
           IconButton(
             onPressed: () async {
